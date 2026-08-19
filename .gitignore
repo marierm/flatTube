@@ -54,8 +54,9 @@ dkms.conf
 # debug information files
 *.dwo
 
-# flatTube build output
+# flatTube build output and runtime state
 /flattube
+/presets.txt
 
 # Python
 __pycache__/

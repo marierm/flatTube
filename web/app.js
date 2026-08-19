@@ -31,6 +31,9 @@ const els = {
   videoControls: document.getElementById("videoControls"),
   swatch: document.getElementById("swatch"),
   preview: document.getElementById("preview"),
+  presets: document.getElementById("presets"),
+  presetName: document.getElementById("presetName"),
+  savePreset: document.getElementById("savePreset"),
 };
 const previewCtx = els.preview.getContext("2d");
 
@@ -230,6 +233,87 @@ function applyState(state) {
   els.videoControls.classList.toggle("hidden", isSolid);
 }
 
+function renderPresets(presets) {
+  els.presets.innerHTML = "";
+  for (const preset of presets) {
+    const chip = document.createElement("div");
+    chip.className = "preset-chip";
+
+    const label = document.createElement("span");
+    label.textContent = preset.name;
+    label.addEventListener("click", () => applyPreset(preset.name));
+    chip.appendChild(label);
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "preset-chip__delete";
+    del.textContent = "×";
+    del.title = `Delete "${preset.name}"`;
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deletePreset(preset.name);
+    });
+    chip.appendChild(del);
+
+    els.presets.appendChild(chip);
+  }
+}
+
+async function refreshPresets() {
+  try {
+    const res = await fetch("/api/presets");
+    renderPresets(await res.json());
+  } catch (e) {
+    // leave the last-known list in place
+  }
+}
+
+async function applyPreset(name) {
+  try {
+    const res = await fetch("/api/presets/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ name }).toString(),
+    });
+    applyState(await res.json());
+    setStatus(true);
+  } catch (e) {
+    setStatus(false);
+  }
+}
+
+async function savePresetFromCurrentState() {
+  const name = els.presetName.value.trim();
+  if (!name)
+    return;
+  try {
+    const res = await fetch("/api/presets", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ name }).toString(),
+    });
+    renderPresets(await res.json());
+    els.presetName.value = "";
+    setStatus(true);
+  } catch (e) {
+    setStatus(false);
+  }
+}
+
+async function deletePreset(name) {
+  try {
+    const res = await fetch("/api/presets/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ name }).toString(),
+    });
+    renderPresets(await res.json());
+    setStatus(true);
+  } catch (e) {
+    setStatus(false);
+  }
+}
+
 async function refresh() {
   try {
     const res = await fetch(API);
@@ -238,6 +322,7 @@ async function refresh() {
   } catch (e) {
     setStatus(false);
   }
+  await refreshPresets();
 }
 
 async function send(fields) {
@@ -280,6 +365,12 @@ els.solid_w.addEventListener("input", () => {
   document.getElementById("solid_w_val").textContent = els.solid_w.value;
   updateSwatch();
   sendSolid();
+});
+
+els.savePreset.addEventListener("click", savePresetFromCurrentState);
+els.presetName.addEventListener("keydown", (e) => {
+  if (e.key === "Enter")
+    savePresetFromCurrentState();
 });
 
 refresh();

@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 
 #include "control.h"
+#include "presets.h"
 
 #define REQ_BUF_SIZE 8192
 
@@ -192,6 +193,34 @@ static void parse_form(const char *body, int body_len, ControlPatch *patch)
   }
 }
 
+/* Pulls a single named field out of a form-urlencoded body. out is set
+ * to an empty string if the key isn't present. */
+static void extract_form_value(const char *body, int body_len, const char *want_key, char *out,
+                                size_t outsize)
+{
+  out[0] = '\0';
+
+  const char *p = body;
+  const char *end = body + body_len;
+
+  while (p < end) {
+    const char *amp = memchr(p, '&', (size_t)(end - p));
+    const char *pair_end = amp ? amp : end;
+    const char *eq = memchr(p, '=', (size_t)(pair_end - p));
+
+    if (eq) {
+      char key[32];
+      url_decode(key, sizeof(key), p, (size_t)(eq - p));
+      if (strcmp(key, want_key) == 0) {
+        url_decode(out, outsize, eq + 1, (size_t)(pair_end - eq - 1));
+        return;
+      }
+    }
+
+    p = pair_end + 1;
+  }
+}
+
 static int build_state_json(char *buf, size_t bufsize)
 {
   ControlState s;
@@ -225,6 +254,24 @@ static int build_preview_json(char *buf, size_t bufsize, const FrameSequence *se
     n += snprintf(buf + n, bufsize - (size_t)n, "%s%d", i > 0 ? "," : "", pixels[i]);
 
   n += snprintf(buf + n, bufsize - (size_t)n, "]}");
+  return n;
+}
+
+static int build_presets_json(char *buf, size_t bufsize)
+{
+  int n = snprintf(buf, bufsize, "[");
+
+  int count = presets_count();
+  for (int i = 0; i < count && n < (int)bufsize; i++) {
+    const Preset *p = presets_get(i);
+    n += snprintf(buf + n, bufsize - (size_t)n,
+                  "%s{\"name\":\"%s\",\"video\":\"%s\",\"hue\":%d,\"sat\":%d,\"val\":%d,\"fps\":%d,"
+                  "\"solid\":{\"r\":%d,\"g\":%d,\"b\":%d,\"w\":%d}}",
+                  i > 0 ? "," : "", p->name, p->video, p->hue, p->sat, p->val, p->fps, p->solid_r,
+                  p->solid_g, p->solid_b, p->solid_w);
+  }
+
+  n += snprintf(buf + n, bufsize - (size_t)n, "]");
   return n;
 }
 
@@ -283,6 +330,71 @@ static void handle_connection(int fd, const char *web_dir)
 
     char json[4096];
     int n = build_state_json(json, sizeof(json));
+    send_response(fd, 200, "OK", "application/json; charset=utf-8", json, (size_t)n);
+    return;
+  }
+
+  if (strcmp(method, "GET") == 0 && strcmp(path, "/api/presets") == 0) {
+    char json[4096];
+    int n = build_presets_json(json, sizeof(json));
+    send_response(fd, 200, "OK", "application/json; charset=utf-8", json, (size_t)n);
+    return;
+  }
+
+  if (strcmp(method, "POST") == 0 && strcmp(path, "/api/presets") == 0) {
+    char name[NAME_LEN];
+    extract_form_value(buf + body_start, total_len - body_start, "name", name, sizeof(name));
+    if (name[0]) {
+      ControlState state;
+      control_get(&state);
+      presets_save(name, &state);
+    }
+
+    char json[4096];
+    int n = build_presets_json(json, sizeof(json));
+    send_response(fd, 200, "OK", "application/json; charset=utf-8", json, (size_t)n);
+    return;
+  }
+
+  if (strcmp(method, "POST") == 0 && strcmp(path, "/api/presets/apply") == 0) {
+    char name[NAME_LEN];
+    extract_form_value(buf + body_start, total_len - body_start, "name", name, sizeof(name));
+    const Preset *p = presets_find(name);
+    if (p) {
+      ControlPatch patch;
+      memset(&patch, 0, sizeof(patch));
+      patch.has_video = 1;
+      snprintf(patch.video, NAME_LEN, "%s", p->video);
+      patch.has_hue = 1;
+      patch.hue = p->hue;
+      patch.has_sat = 1;
+      patch.sat = p->sat;
+      patch.has_val = 1;
+      patch.val = p->val;
+      patch.has_fps = 1;
+      patch.fps = p->fps;
+      patch.has_solid = 1;
+      patch.solid_r = p->solid_r;
+      patch.solid_g = p->solid_g;
+      patch.solid_b = p->solid_b;
+      patch.solid_w = p->solid_w;
+      control_apply(&patch);
+    }
+
+    char json[4096];
+    int n = build_state_json(json, sizeof(json));
+    send_response(fd, 200, "OK", "application/json; charset=utf-8", json, (size_t)n);
+    return;
+  }
+
+  if (strcmp(method, "POST") == 0 && strcmp(path, "/api/presets/delete") == 0) {
+    char name[NAME_LEN];
+    extract_form_value(buf + body_start, total_len - body_start, "name", name, sizeof(name));
+    if (name[0])
+      presets_delete(name);
+
+    char json[4096];
+    int n = build_presets_json(json, sizeof(json));
     send_response(fd, 200, "OK", "application/json; charset=utf-8", json, (size_t)n);
     return;
   }
