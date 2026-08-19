@@ -165,6 +165,13 @@ int main(int argc, char **argv)
   control_init();
   presets_init(presets_file);
 
+  const Preset *default_preset = presets_get_default();
+  if (default_preset) {
+    ControlPatch patch = presets_to_patch(default_preset);
+    control_apply(&patch);
+    printf("Applied default preset '%s' at startup\n", default_preset->name);
+  }
+
   ws2811_t ledstring = {
       .freq = TARGET_FREQ,
       .dmanum = DMA,

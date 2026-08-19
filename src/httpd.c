@@ -266,9 +266,9 @@ static int build_presets_json(char *buf, size_t bufsize)
     const Preset *p = presets_get(i);
     n += snprintf(buf + n, bufsize - (size_t)n,
                   "%s{\"name\":\"%s\",\"video\":\"%s\",\"hue\":%d,\"sat\":%d,\"val\":%d,\"fps\":%d,"
-                  "\"solid\":{\"r\":%d,\"g\":%d,\"b\":%d,\"w\":%d}}",
+                  "\"solid\":{\"r\":%d,\"g\":%d,\"b\":%d,\"w\":%d},\"default\":%s}",
                   i > 0 ? "," : "", p->name, p->video, p->hue, p->sat, p->val, p->fps, p->solid_r,
-                  p->solid_g, p->solid_b, p->solid_w);
+                  p->solid_g, p->solid_b, p->solid_w, p->is_default ? "true" : "false");
   }
 
   n += snprintf(buf + n, bufsize - (size_t)n, "]");
@@ -361,23 +361,7 @@ static void handle_connection(int fd, const char *web_dir)
     extract_form_value(buf + body_start, total_len - body_start, "name", name, sizeof(name));
     const Preset *p = presets_find(name);
     if (p) {
-      ControlPatch patch;
-      memset(&patch, 0, sizeof(patch));
-      patch.has_video = 1;
-      snprintf(patch.video, NAME_LEN, "%s", p->video);
-      patch.has_hue = 1;
-      patch.hue = p->hue;
-      patch.has_sat = 1;
-      patch.sat = p->sat;
-      patch.has_val = 1;
-      patch.val = p->val;
-      patch.has_fps = 1;
-      patch.fps = p->fps;
-      patch.has_solid = 1;
-      patch.solid_r = p->solid_r;
-      patch.solid_g = p->solid_g;
-      patch.solid_b = p->solid_b;
-      patch.solid_w = p->solid_w;
+      ControlPatch patch = presets_to_patch(p);
       control_apply(&patch);
     }
 
@@ -392,6 +376,17 @@ static void handle_connection(int fd, const char *web_dir)
     extract_form_value(buf + body_start, total_len - body_start, "name", name, sizeof(name));
     if (name[0])
       presets_delete(name);
+
+    char json[4096];
+    int n = build_presets_json(json, sizeof(json));
+    send_response(fd, 200, "OK", "application/json; charset=utf-8", json, (size_t)n);
+    return;
+  }
+
+  if (strcmp(method, "POST") == 0 && strcmp(path, "/api/presets/default") == 0) {
+    char name[NAME_LEN];
+    extract_form_value(buf + body_start, total_len - body_start, "name", name, sizeof(name));
+    presets_set_default(name); /* empty name clears the default */
 
     char json[4096];
     int n = build_presets_json(json, sizeof(json));
