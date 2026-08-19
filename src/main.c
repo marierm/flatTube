@@ -15,6 +15,7 @@
 #include "mapping.h"
 #include "pngseq.h"
 #include "control.h"
+#include "presets.h"
 #include "httpd.h"
 #include "rgb_hsv.h"
 #include "ws2811.h"
@@ -26,6 +27,7 @@
 #define DEFAULT_PORT 8080
 #define DEFAULT_VIDEOS_DIR "videos"
 #define DEFAULT_WEB_DIR "web"
+#define DEFAULT_PRESETS_FILE "presets.txt"
 #define DEFAULT_FPS 25
 #define STRIP_TYPE SK6812_STRIP_GRBW /* SK6812 RGBW strip reused from fpTube */
 #define IDLE_POLL_US 100000 /* how often to check for started=1 while off */
@@ -47,11 +49,13 @@ static void print_usage(const char *prog)
           "Usage: %s [options]\n"
           "  -i, --videos-dir <dir>    directory of video subfolders (default %s)\n"
           "  -w, --web-dir <dir>       directory of frontend assets (default %s)\n"
+          "  -r, --presets-file <path> file presets are saved to (default %s)\n"
           "  -p, --port <n>            HTTP control server port (default %d)\n"
           "  -g, --gpio <pin>          GPIO pin driving the LED strip (default %d)\n"
           "  -b, --brightness <0-255>  overall hardware brightness cap (default %d)\n"
           "  -h, --help                this help\n",
-          prog, DEFAULT_VIDEOS_DIR, DEFAULT_WEB_DIR, DEFAULT_PORT, DEFAULT_GPIO_PIN, DEFAULT_BRIGHTNESS);
+          prog, DEFAULT_VIDEOS_DIR, DEFAULT_WEB_DIR, DEFAULT_PRESETS_FILE, DEFAULT_PORT, DEFAULT_GPIO_PIN,
+          DEFAULT_BRIGHTNESS);
 }
 
 typedef struct {
@@ -115,10 +119,12 @@ int main(int argc, char **argv)
   int port = DEFAULT_PORT;
   const char *videos_dir = DEFAULT_VIDEOS_DIR;
   const char *web_dir = DEFAULT_WEB_DIR;
+  const char *presets_file = DEFAULT_PRESETS_FILE;
 
   static struct option longopts[] = {
       {"videos-dir", required_argument, 0, 'i'},
       {"web-dir", required_argument, 0, 'w'},
+      {"presets-file", required_argument, 0, 'r'},
       {"port", required_argument, 0, 'p'},
       {"gpio", required_argument, 0, 'g'},
       {"brightness", required_argument, 0, 'b'},
@@ -126,13 +132,16 @@ int main(int argc, char **argv)
       {0, 0, 0, 0}};
 
   int c;
-  while ((c = getopt_long(argc, argv, "i:w:p:g:b:h", longopts, NULL)) != -1) {
+  while ((c = getopt_long(argc, argv, "i:w:r:p:g:b:h", longopts, NULL)) != -1) {
     switch (c) {
     case 'i':
       videos_dir = optarg;
       break;
     case 'w':
       web_dir = optarg;
+      break;
+    case 'r':
+      presets_file = optarg;
       break;
     case 'p':
       port = atoi(optarg);
@@ -154,6 +163,7 @@ int main(int argc, char **argv)
 
   control_load_videos(videos_dir);
   control_init();
+  presets_init(presets_file);
 
   ws2811_t ledstring = {
       .freq = TARGET_FREQ,
