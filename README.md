@@ -11,15 +11,18 @@ OSC (a web frontend for control is planned later).
 
 ## Hardware layout
 
-The strip is 120 LEDs total, wired as 4 rows of 30, snaking bottom to top
-with no filler LEDs between rows:
+The strip is 120 LEDs total, wired as 4 rows of 30 with no filler LEDs
+between rows:
 
-- Row 0 (bottom): LEDs 0-29, right to left
+- Row 0 (visual top): LEDs 0-29, right to left
 - Row 1: LEDs 30-59, left to right
 - Row 2: LEDs 60-89, right to left
-- Row 3 (top): LEDs 90-119, left to right
+- Row 3 (visual bottom): LEDs 90-119, left to right
 
-See `src/mapping.c` for the index calculation.
+The physical strip is described as wired bottom-to-top, but LED row 0
+reads as the visual top of the box, not the bottom -- confirmed against
+the hardware with `tools/gen_test_pattern.py`'s R/G/B/R pattern. See
+`src/mapping.c` for the index calculation.
 
 ## Building
 

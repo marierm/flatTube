@@ -7,14 +7,15 @@
 
 /*
  * The box is wired as a single serpentine strip of 120 LEDs, no filler
- * LEDs between rows: physical row 0 (bottom) starts at the right edge and
- * runs right-to-left, row 1 runs left-to-right, row 2 right-to-left, row 3
- * (top) left-to-right. LED index increases continuously from 0 at
- * bottom-right to 119 at the top.
+ * LEDs between rows: LED row 0 starts at the right edge and runs
+ * right-to-left, row 1 runs left-to-right, row 2 right-to-left, row 3
+ * left-to-right. LED index increases continuously from 0 to 119.
  *
- * image_row follows normal image conventions (0 = top row of the frame),
- * so it is flipped to the physical row before applying the serpentine
- * direction.
+ * image_row follows normal image conventions (0 = top row of the frame).
+ * Confirmed against the physical box with the R/G/B/R test pattern: image
+ * row 0 (top of frame) is LED row 0, i.e. no vertical flip -- despite the
+ * strip being described as wired bottom-to-top, LED row 0 reads as the
+ * visual top of the box, not the bottom.
  */
 int led_index_for_pixel(int col, int image_row);
 

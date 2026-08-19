@@ -3,9 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <setjmp.h>
 #include <glob.h>
-#include <png.h>
+#include <png.h> /* pulls in setjmp.h itself; must not be included before it (breaks on libpng 1.2) */
 
 static void die(const char *fmt, const char *arg)
 {
