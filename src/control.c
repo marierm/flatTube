@@ -127,7 +127,7 @@ void control_apply(const ControlPatch *patch)
   if (patch->has_val)
     state.val = clamp(patch->val, 0, 255);
   if (patch->has_fps)
-    state.fps = clamp(patch->fps, 1, 60);
+    state.fps = clamp(patch->fps, 1, 120);
   if (patch->has_paused)
     state.paused = patch->paused ? 1 : 0;
   if (patch->has_started)
