@@ -213,6 +213,21 @@ static int build_state_json(char *buf, size_t bufsize)
   return n;
 }
 
+/* First frame of seq, as a flat [r,g,b,r,g,b,...] array -- a still-frame
+ * thumbnail, not the live gamma/HSV-adjusted render. */
+static int build_preview_json(char *buf, size_t bufsize, const FrameSequence *seq)
+{
+  int n = snprintf(buf, bufsize, "{\"width\":%d,\"height\":%d,\"pixels\":[", seq->width, seq->height);
+
+  const uint8_t *pixels = seq->frames[0].pixels;
+  int total = seq->width * seq->height * 3;
+  for (int i = 0; i < total && n < (int)bufsize; i++)
+    n += snprintf(buf + n, bufsize - (size_t)n, "%s%d", i > 0 ? "," : "", pixels[i]);
+
+  n += snprintf(buf + n, bufsize - (size_t)n, "]}");
+  return n;
+}
+
 static int serve_static(int fd, const char *web_dir, const char *req_path)
 {
   for (size_t i = 0; i < sizeof(static_routes) / sizeof(static_routes[0]); i++) {
@@ -268,6 +283,24 @@ static void handle_connection(int fd, const char *web_dir)
 
     char json[4096];
     int n = build_state_json(json, sizeof(json));
+    send_response(fd, 200, "OK", "application/json; charset=utf-8", json, (size_t)n);
+    return;
+  }
+
+  static const char preview_prefix[] = "/api/preview/";
+  if (strcmp(method, "GET") == 0 && strncmp(path, preview_prefix, strlen(preview_prefix)) == 0) {
+    char name[NAME_LEN];
+    const char *raw_name = path + strlen(preview_prefix);
+    url_decode(name, sizeof(name), raw_name, strlen(raw_name));
+
+    const FrameSequence *seq = control_find_video(name);
+    if (!seq) {
+      send_response(fd, 404, "Not Found", "text/plain", "not found", 9);
+      return;
+    }
+
+    char json[4096];
+    int n = build_preview_json(json, sizeof(json), seq);
     send_response(fd, 200, "OK", "application/json; charset=utf-8", json, (size_t)n);
     return;
   }
