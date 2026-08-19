@@ -41,6 +41,17 @@ sudo ./flattube
 
 Then open `http://<pi-hostname>:8080/` for the control panel.
 
+## Running at boot
+
+`systemd/flattube.service` runs the built binary as root out of
+`/home/pi/flatTube`, restarting it if it crashes:
+
+```
+sudo cp systemd/flattube.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now flattube
+```
+
 ## Usage
 
 ```

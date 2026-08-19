@@ -1,0 +1,14 @@
+[Unit]
+Description=flatTube LED video player and web control panel
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/flatTube
+ExecStart=/home/pi/flatTube/flattube
+Restart=on-failure
+RestartSec=2
+User=root
+
+[Install]
+WantedBy=multi-user.target
