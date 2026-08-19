@@ -300,6 +300,31 @@ input[type="range"]::-moz-range-thumb {
   border-color: var(--accent);
 }
 
+.preset-chip--default {
+  border-color: var(--accent);
+}
+
+.preset-chip__star {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.preset-chip__star:hover {
+  color: var(--accent);
+}
+
+.preset-chip--default .preset-chip__star {
+  color: var(--accent);
+}
+
 .preset-chip__delete {
   appearance: none;
   border: none;
