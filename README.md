@@ -32,7 +32,10 @@ talks to the BCM283x DMA/PWM peripherals directly via `/dev/mem`).
 
 Prerequisites on the Pi: `libpng-dev`, a C compiler, and GPIO access
 (typically run as root, or with the appropriate group permissions for
-`/dev/mem`).
+`/dev/mem`). On an old Raspbian Stretch install with only `libpng12-dev`
+available, the build still works as-is -- just don't add a stray
+`#include <setjmp.h>` before `<png.h>` anywhere (libpng 1.2 pulls it in
+itself and errors if the app does it first).
 
 ```
 make
@@ -58,6 +61,7 @@ sudo systemctl enable --now flattube
 ./flattube [options]
   -i, --videos-dir <dir>    directory of video subfolders (default videos)
   -w, --web-dir <dir>       directory of frontend assets (default web)
+  -r, --presets-file <path> file presets are saved to (default presets.txt)
   -p, --port <n>            HTTP control server port (default 8080)
   -g, --gpio <pin>          GPIO pin driving the LED strip (default 18)
   -b, --brightness <0-255>  overall hardware brightness cap (default 255)
@@ -71,19 +75,34 @@ with no backing video.
 
 ## Control panel
 
-The web UI (`web/`) talks to a small JSON API served by the same binary:
+The web UI (`web/`) talks to a small JSON API served by the same binary,
+all `application/x-www-form-urlencoded` in / JSON out (no JSON is ever
+parsed server-side, only generated -- keeps the hand-rolled C httpd
+simple):
 
 - `GET /api/state` / `POST /api/state` -- current video, hue/saturation/
-  value, frame rate, paused, started (power), and the solid-color RGBW
-  values. POST takes `application/x-www-form-urlencoded` fields; only the
-  fields present are changed.
+  value, frame rate (1-120), paused, started (power), and the
+  solid-color RGBW values. POST only changes the fields present in the
+  body.
 - `GET /api/preview/<video>` -- the selected video's first frame as raw
   RGB pixels, for the still-frame thumbnail.
+- `GET /api/presets` / `POST /api/presets` -- list saved presets, or save
+  the current state as a named preset (`name=...`; upserts by name).
+- `POST /api/presets/apply` -- loads a preset's video/hue/sat/val/fps/
+  solid-RGBW (`name=...`).
+- `POST /api/presets/delete` -- removes a preset (`name=...`).
+- `POST /api/presets/default` -- marks a preset to auto-load at startup
+  (`name=...`; empty name clears it). At most one preset is ever
+  default; presets are otherwise look-only and don't capture
+  paused/started.
 
 "Started" (power) clears the strip and idles the render loop without
 exiting the process -- the control panel stays reachable. "Paused" freezes
 frame advance but still re-renders every tick, so hue/saturation/value or
 solid-color edits show immediately even while paused.
+
+Presets are saved to `presets.txt` (plain `key=value` blocks, not JSON --
+see `src/presets.c`), gitignored since it's runtime state, not source.
 
 ## Videos
 
@@ -104,9 +123,10 @@ python3 tools/convert_fire.py
 ## Layout
 
 ```
-src/            application code (main.c, mapping.c, pngseq.c, control.c, httpd.c)
+src/            application code (main.c, mapping.c, pngseq.c, control.c, httpd.c, presets.c)
 src/vendor/     vendored rpi_ws281x driver + RGB/HSV color conversion, unmodified
 web/            static frontend (index.html, style.css, app.js) served by httpd.c
 tools/          Python scripts for generating/converting video frame sequences
 videos/         PNG frame sequences played by flattube
+systemd/        flattube.service unit for boot-time startup
 ```
