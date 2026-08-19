@@ -5,7 +5,8 @@ wired in a serpentine ("snake") pattern inside a light box, driven by a
 Raspberry Pi Zero W.
 
 This is a stripped-down spinoff of [fpTube](../fpTube), which drives 200
-tubes of 120 LEDs each (a 200x120 video wall) over DMX/serial/OSC. flatTube
+tubes of 120 LEDs each (a 200x120 video wall) over DMX/serial/OSC. fpTube
+was originally developed for Compagnia Finzi Pasca in 2018-2019. flatTube
 keeps only what's needed to play video on one strip: no DMX, no serial, no
 OSC. Instead it exposes a small HTTP API and a web control panel for live
 control.
