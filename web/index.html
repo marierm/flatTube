@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>flatTube</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main class="panel">
+  <header class="panel__header">
+    <h1>flatTube</h1>
+    <span id="status" class="status" title="connection status"></span>
+  </header>
+
+  <section class="row row--switches">
+    <label class="toggle">
+      <input type="checkbox" id="started">
+      <span class="toggle__track"><span class="toggle__thumb"></span></span>
+      <span class="toggle__label" id="startedLabel">Power</span>
+    </label>
+    <label class="toggle">
+      <input type="checkbox" id="paused">
+      <span class="toggle__track"><span class="toggle__thumb"></span></span>
+      <span class="toggle__label" id="pausedLabel">Playing</span>
+    </label>
+  </section>
+
+  <section class="field">
+    <label for="video">Video</label>
+    <select id="video"></select>
+  </section>
+
+  <section id="solidControls" class="field-group hidden">
+    <div class="field">
+      <label>Color</label>
+      <div class="colorpicker">
+        <div class="colorpicker__sv" id="svArea">
+          <div class="colorpicker__svCursor" id="svCursor"></div>
+        </div>
+        <div class="colorpicker__hue" id="hueArea">
+          <div class="colorpicker__hueCursor" id="hueCursor"></div>
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label for="solid_w">White<span class="value" id="solid_w_val"></span></label>
+      <input type="range" id="solid_w" min="0" max="255" step="1">
+    </div>
+    <div class="swatch" id="swatch" title="preview with white channel blended in"></div>
+  </section>
+
+  <section id="videoControls" class="field-group">
+    <div class="field">
+      <label>Preview</label>
+      <canvas id="preview" width="30" height="4" class="preview"></canvas>
+    </div>
+    <div class="field">
+      <label for="hue">Hue<span class="value" id="hue_val"></span></label>
+      <input type="range" id="hue" min="0" max="255" step="1">
+    </div>
+    <div class="field">
+      <label for="sat">Saturation<span class="value" id="sat_val"></span></label>
+      <input type="range" id="sat" min="0" max="255" step="1">
+    </div>
+    <div class="field">
+      <label for="val">Value<span class="value" id="val_val"></span></label>
+      <input type="range" id="val" min="0" max="255" step="1">
+    </div>
+    <div class="field">
+      <label for="fps">Frame rate<span class="value" id="fps_val"></span></label>
+      <input type="range" id="fps" min="1" max="60" step="1">
+    </div>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>
