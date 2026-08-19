@@ -7,7 +7,8 @@ Raspberry Pi Zero W.
 This is a stripped-down spinoff of [fpTube](../fpTube), which drives 200
 tubes of 120 LEDs each (a 200x120 video wall) over DMX/serial/OSC. flatTube
 keeps only what's needed to play video on one strip: no DMX, no serial, no
-OSC (a web frontend for control is planned later).
+OSC. Instead it exposes a small HTTP API and a web control panel for live
+control.
 
 ## Hardware layout
 
@@ -35,22 +36,43 @@ Prerequisites on the Pi: `libpng-dev`, a C compiler, and GPIO access
 
 ```
 make
-sudo ./flattube videos/test_pattern
+sudo ./flattube
 ```
+
+Then open `http://<pi-hostname>:8080/` for the control panel.
 
 ## Usage
 
 ```
-./flattube [options] <frames-dir>
-  <frames-dir>              directory of 30x4 PNG frames to play in a loop
+./flattube [options]
+  -i, --videos-dir <dir>    directory of video subfolders (default videos)
+  -w, --web-dir <dir>       directory of frontend assets (default web)
+  -p, --port <n>            HTTP control server port (default 8080)
   -g, --gpio <pin>          GPIO pin driving the LED strip (default 18)
-  -b, --brightness <0-255>  overall brightness (default 255)
-  -f, --fps <n>             playback frame rate (default 25)
+  -b, --brightness <0-255>  overall hardware brightness cap (default 255)
 ```
 
-`<frames-dir>` must contain PNG files, all exactly 30x4 pixels, named so
-that alphabetical order matches playback order (e.g. `frame_0000.png`,
-`frame_0001.png`, ...).
+Each subdirectory of `--videos-dir` is a selectable video: a sequence of
+30x4 PNG frames, named so alphabetical order matches playback order (e.g.
+`frame_0000.png`, `frame_0001.png`, ...), preloaded into memory at
+startup. The dropdown also always offers "Solid Color", a static RGBW fill
+with no backing video.
+
+## Control panel
+
+The web UI (`web/`) talks to a small JSON API served by the same binary:
+
+- `GET /api/state` / `POST /api/state` -- current video, hue/saturation/
+  value, frame rate, paused, started (power), and the solid-color RGBW
+  values. POST takes `application/x-www-form-urlencoded` fields; only the
+  fields present are changed.
+- `GET /api/preview/<video>` -- the selected video's first frame as raw
+  RGB pixels, for the still-frame thumbnail.
+
+"Started" (power) clears the strip and idles the render loop without
+exiting the process -- the control panel stays reachable. "Paused" freezes
+frame advance but still re-renders every tick, so hue/saturation/value or
+solid-color edits show immediately even while paused.
 
 ## Videos
 
@@ -71,8 +93,9 @@ python3 tools/convert_fire.py
 ## Layout
 
 ```
-src/            application code (main.c, mapping.c, pngseq.c)
-src/vendor/     vendored rpi_ws281x DMA/PWM driver, unmodified
+src/            application code (main.c, mapping.c, pngseq.c, control.c, httpd.c)
+src/vendor/     vendored rpi_ws281x driver + RGB/HSV color conversion, unmodified
+web/            static frontend (index.html, style.css, app.js) served by httpd.c
 tools/          Python scripts for generating/converting video frame sequences
 videos/         PNG frame sequences played by flattube
 ```
