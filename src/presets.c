@@ -51,6 +51,8 @@ static void apply_field(Preset *p, const char *key, const char *value)
     p->solid_b = (uint8_t)atoi(value);
   else if (strcmp(key, "solid_w") == 0)
     p->solid_w = (uint8_t)atoi(value);
+  else if (strcmp(key, "default") == 0)
+    p->is_default = atoi(value);
 }
 
 static void save_to_disk(void)
@@ -68,9 +70,9 @@ static void save_to_disk(void)
     const Preset *p = &presets[i];
     fprintf(f,
             "name=%s\nvideo=%s\nhue=%d\nsat=%d\nval=%d\nfps=%d\n"
-            "solid_r=%d\nsolid_g=%d\nsolid_b=%d\nsolid_w=%d\n\n",
+            "solid_r=%d\nsolid_g=%d\nsolid_b=%d\nsolid_w=%d\ndefault=%d\n\n",
             p->name, p->video, p->hue, p->sat, p->val, p->fps, p->solid_r, p->solid_g, p->solid_b,
-            p->solid_w);
+            p->solid_w, p->is_default);
   }
 
   fclose(f);
@@ -150,6 +152,10 @@ void presets_save(const char *name, const ControlState *state)
       return;
     }
     idx = preset_count++;
+    /* Zero the slot first: it may be a reused array position left behind
+     * by presets_delete()'s shift, and stale is_default must not leak
+     * into what is supposed to be a brand-new preset. */
+    memset(&presets[idx], 0, sizeof(presets[idx]));
   }
 
   Preset *p = &presets[idx];
@@ -178,4 +184,48 @@ void presets_delete(const char *name)
       return;
     }
   }
+}
+
+const Preset *presets_get_default(void)
+{
+  for (int i = 0; i < preset_count; i++)
+    if (presets[i].is_default)
+      return &presets[i];
+  return NULL;
+}
+
+void presets_set_default(const char *name)
+{
+  int found = (name[0] == '\0') ? 1 : 0; /* empty name: just clear everyone */
+  for (int i = 0; i < preset_count; i++) {
+    int match = strcmp(presets[i].name, name) == 0;
+    presets[i].is_default = match;
+    found = found || match;
+  }
+  if (found)
+    save_to_disk();
+}
+
+ControlPatch presets_to_patch(const Preset *p)
+{
+  ControlPatch patch;
+  memset(&patch, 0, sizeof(patch));
+
+  patch.has_video = 1;
+  snprintf(patch.video, NAME_LEN, "%s", p->video);
+  patch.has_hue = 1;
+  patch.hue = p->hue;
+  patch.has_sat = 1;
+  patch.sat = p->sat;
+  patch.has_val = 1;
+  patch.val = p->val;
+  patch.has_fps = 1;
+  patch.fps = p->fps;
+  patch.has_solid = 1;
+  patch.solid_r = p->solid_r;
+  patch.solid_g = p->solid_g;
+  patch.solid_b = p->solid_b;
+  patch.solid_w = p->solid_w;
+
+  return patch;
 }
