@@ -112,14 +112,29 @@ see `src/presets.c`), gitignored since it's runtime state, not source.
   across all rows in lockstep, for confirming wiring/direction.
 - `videos/fire/` -- the fpTube "006-Fire" sequence, downsampled from
   200x120 to 30x4 by `tools/convert_fire.py`.
+- `videos/bluesky/`, `videos/andromeda/` -- the first 3 minutes of two
+  YouTube ambient/screensaver videos, fetched and downsampled by
+  `tools/fetch_youtube.py`.
 
-Regenerate either with:
+Regenerate with:
 
 ```
 pip install -r tools/requirements.txt
 python3 tools/gen_test_pattern.py
 python3 tools/convert_fire.py
 ```
+
+`tools/fetch_youtube.py` needs `yt-dlp` and `ffmpeg` on `PATH` (not pip
+packages -- install via your system package manager, e.g. `brew install
+yt-dlp ffmpeg`):
+
+```
+python3 tools/fetch_youtube.py <youtube-url> <name> [-d seconds] [-f fps]
+```
+
+Downloads only the requested section (default first 180s) at a capped
+resolution and lets ffmpeg's area-averaging scale filter do the 30x4
+downsampling in one pass, writing frames straight to `videos/<name>/`.
 
 ## Layout
 
