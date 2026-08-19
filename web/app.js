@@ -237,12 +237,25 @@ function renderPresets(presets) {
   els.presets.innerHTML = "";
   for (const preset of presets) {
     const chip = document.createElement("div");
-    chip.className = "preset-chip";
+    chip.className = "preset-chip" + (preset.default ? " preset-chip--default" : "");
 
     const label = document.createElement("span");
     label.textContent = preset.name;
     label.addEventListener("click", () => applyPreset(preset.name));
     chip.appendChild(label);
+
+    const star = document.createElement("button");
+    star.type = "button";
+    star.className = "preset-chip__star";
+    star.textContent = preset.default ? "★" : "☆";
+    star.title = preset.default
+      ? "Loads on startup -- click to unset"
+      : "Set as the preset that loads on startup";
+    star.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setDefaultPreset(preset.default ? "" : preset.name);
+    });
+    chip.appendChild(star);
 
     const del = document.createElement("button");
     del.type = "button";
@@ -303,6 +316,20 @@ async function savePresetFromCurrentState() {
 async function deletePreset(name) {
   try {
     const res = await fetch("/api/presets/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ name }).toString(),
+    });
+    renderPresets(await res.json());
+    setStatus(true);
+  } catch (e) {
+    setStatus(false);
+  }
+}
+
+async function setDefaultPreset(name) {
+  try {
+    const res = await fetch("/api/presets/default", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ name }).toString(),
